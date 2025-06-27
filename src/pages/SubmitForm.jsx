@@ -82,19 +82,6 @@ export default function SubmitForm() {
     return newErrors;
   };
 
-  const analyzeText = (text) => {
-    const lower = text.toLowerCase();
-    let intent = "предложение";
-    let sentiment = "нейтрально";
-
-    if (lower.includes("не работает") || lower.includes("ошибка") || lower.includes("ужас"))
-      [intent, sentiment] = ["жалоба", "негатив"];
-    else if (lower.includes("как") || lower.includes("?")) intent = "вопрос";
-    else if (lower.includes("спасибо")) sentiment = "позитив";
-
-    return { intent, sentiment };
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validate();
@@ -103,10 +90,16 @@ export default function SubmitForm() {
       return;
     }
 
-    const aiResult = analyzeText(form.message);
-    const finalService = form.service === "other"
-      ? form.customService?.trim() || "Не указано"
-      : form.service;
+    // 🔍 AI-анализ на backend
+    const aiRes = await fetch("http://localhost:4000/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: form.message }),
+    });
+    const aiResult = await aiRes.json();
+
+    const finalService =
+      form.service === "other" ? form.customService?.trim() || "Не указано" : form.service;
 
     const newEntry = {
       ...form,
@@ -182,7 +175,6 @@ export default function SubmitForm() {
         </select>
         {errors.subcategory && <p className="text-red-600 text-sm">{errors.subcategory}</p>}
 
-        {/* Выпадающий или текстовое поле */}
         {form.category && (
           <>
             <select

@@ -1,13 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { Table, Select, Tag, Spin, Button, Input, Image } from "antd";
+import { DownloadOutlined } from "@ant-design/icons";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import debounce from "lodash.debounce";
+
+const { Option } = Select;
 
 export default function RequestsTable() {
   const [requests, setRequests] = useState([]);
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  const [issueTypeFilter, setIssueTypeFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
 
-  const executors = ["Айбек", "Дана", "Ербол", "Сауле", ""]; // 👤 Исполнители
+  const executors = ["Айбек", "Дана", "Ербол", "Сауле"];
 
   useEffect(() => {
     fetch("http://localhost:4000/api/requests")
@@ -18,124 +23,198 @@ export default function RequestsTable() {
       });
   }, []);
 
-  const updateField = async (id, field, value) => {
-    const updated = requests.map((r) => (r._id === id ? { ...r, [field]: value } : r));
-    setRequests(updated);
+  const updateField = useCallback(async (id, field, value) => {
+    setRequests((prev) =>
+      prev.map((r) => (r._id === id ? { ...r, [field]: value } : r))
+    );
 
     await fetch(`http://localhost:4000/api/requests/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [field]: value }),
     });
-  };
-
-  const filtered = requests.filter((r) => {
-    return (
-      (!categoryFilter || r.category === categoryFilter) &&
-      (!regionFilter || r.region === regionFilter) &&
-      (!issueTypeFilter || r.subcategory === issueTypeFilter)
-    );
-  });
+  }, []);
 
   const unique = (key) => [...new Set(requests.map((r) => r[key]).filter(Boolean))];
 
-  const colorForSentiment = (s) => {
-    if (s === "позитив") return "text-green-600";
-    if (s === "негатив") return "text-red-600";
-    return "text-gray-500";
+  const sentimentColor = (s) =>
+    s === "позитив" ? "green" : s === "негатив" ? "red" : "default";
+
+  const statusColor = {
+    "Новое": "blue",
+    "В работе": "orange",
+    "Завершено": "green",
   };
 
-  const statusColors = {
-    "Новое": "text-blue-600",
-    "В работе": "text-yellow-600",
-    "Завершено": "text-green-600",
+  const exportToExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      requests.map((r) => ({
+        Имя: r.name,
+        Регион: r.region,
+        Категория: r.category,
+        Подтема: r.subcategory,
+        Сообщение: r.message,
+        Контакт: r.contact,
+        Интенция: r.aiResult?.intent,
+        Тональность: r.aiResult?.sentiment,
+        Статус: r.status,
+        Исполнитель: r.executor,
+        Дата: r.createdAt?.slice(0, 10),
+      }))
+    );
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Обращения");
+
+    const buffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+    const file = new Blob([buffer], { type: "application/octet-stream" });
+    saveAs(file, "обращения.xlsx");
   };
+
+  const handleSearch = useMemo(() => debounce((value) => {
+    setSearchText(value.toLowerCase());
+  }, 300), []);
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter((r) =>
+      r.message?.toLowerCase().includes(searchText)
+    );
+  }, [requests, searchText]);
+
+  const columns = [
+    {
+      title: "Имя",
+      dataIndex: "name",
+      sorter: (a, b) => a.name?.localeCompare(b.name),
+    },
+    {
+      title: "Регион",
+      dataIndex: "region",
+      filters: unique("region").map((r) => ({ text: r, value: r })),
+      onFilter: (value, record) => record.region === value,
+    },
+    {
+      title: "Категория",
+      dataIndex: "category",
+      filters: unique("category").map((c) => ({ text: c, value: c })),
+      onFilter: (value, record) => record.category === value,
+    },
+    {
+      title: "Подтема",
+      dataIndex: "subcategory",
+      filters: unique("subcategory").map((s) => ({ text: s, value: s })),
+      onFilter: (value, record) => record.subcategory === value,
+    },
+    {
+      title: "Сообщение",
+      dataIndex: "message",
+      sorter: (a, b) => (a.message?.length || 0) - (b.message?.length || 0),
+    },
+    {
+      title: "Контакт",
+      dataIndex: "contact",
+    },
+    {
+      title: "AI: Интенция",
+      dataIndex: ["aiResult", "intent"],
+    },
+    {
+      title: "AI: Тональность",
+      dataIndex: ["aiResult", "sentiment"],
+      filters: ["позитив", "негатив", "нейтрально"].map((s) => ({ text: s, value: s })),
+      onFilter: (value, record) => record.aiResult?.sentiment === value,
+      render: (text) => <Tag color={sentimentColor(text)}>{text || "-"}</Tag>,
+    },
+    {
+      title: "🟡 Статус",
+      dataIndex: "status",
+      filters: Object.keys(statusColor).map((s) => ({ text: s, value: s })),
+      onFilter: (value, record) => record.status === value,
+      render: (text, record) => (
+        <Select
+          defaultValue={text || "Новое"}
+          style={{ width: 120 }}
+          onChange={(value) => updateField(record._id, "status", value)}
+        >
+          {Object.keys(statusColor).map((s) => (
+            <Option key={s} value={s}>
+              <Tag color={statusColor[s]}>{s}</Tag>
+            </Option>
+          ))}
+        </Select>
+      ),
+    },
+    {
+      title: "👤 Исполнитель",
+      dataIndex: "executor",
+      render: (text, record) => (
+        <Select
+          defaultValue={text || ""}
+          style={{ width: 120 }}
+          onChange={(value) => updateField(record._id, "executor", value)}
+        >
+          <Option value="">—</Option>
+          {executors.map((e) => (
+            <Option key={e} value={e}>
+              {e}
+            </Option>
+          ))}
+        </Select>
+      ),
+    },
+    {
+      title: "📎 Вложение",
+      dataIndex: "attachment",
+      render: (img) =>
+        img ? (
+          <a href={img} target="_blank" rel="noreferrer">
+            <Image
+              src={img}
+              alt="вложение"
+              width={50}
+              height={50}
+              style={{ objectFit: "cover", borderRadius: 4 }}
+              preview={false}
+            />
+          </a>
+        ) : (
+          "-"
+        ),
+    },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto mt-10 p-4">
+    <div className="max-w-7xl mx-auto mt-10 px-4">
       <h2 className="text-2xl font-bold mb-6">📋 Обращения</h2>
 
-      {/* Фильтры */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="p-2 border rounded">
-          <option value="">Все категории</option>
-          {unique("category").map((c) => <option key={c}>{c}</option>)}
-        </select>
+      <Input.Search
+        placeholder="Поиск по сообщению..."
+        onChange={(e) => handleSearch(e.target.value)}
+        enterButton
+        allowClear
+        className="mb-4 max-w-md"
+      />
 
-        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)} className="p-2 border rounded">
-          <option value="">Все регионы</option>
-          {unique("region").map((r) => <option key={r}>{r}</option>)}
-        </select>
+      <Button
+        type="primary"
+        icon={<DownloadOutlined />}
+        onClick={exportToExcel}
+        className="mb-4 ml-4"
+      >
+        Экспорт в Excel
+      </Button>
 
-        <select value={issueTypeFilter} onChange={(e) => setIssueTypeFilter(e.target.value)} className="p-2 border rounded">
-          <option value="">Все подтемы</option>
-          {unique("subcategory").map((s) => <option key={s}>{s}</option>)}
-        </select>
-      </div>
-
-      {/* Загрузка / Нет данных */}
       {loading ? (
-        <p className="text-center text-gray-500">Загрузка...</p>
-      ) : filtered.length === 0 ? (
-        <p className="text-center text-gray-500">Нет обращений</p>
+        <Spin size="large" className="block mx-auto mt-10" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border text-sm text-left">
-            <thead className="bg-gray-100 text-xs uppercase text-gray-600">
-              <tr>
-                <th className="p-2 border">Имя</th>
-                <th className="p-2 border">Регион</th>
-                <th className="p-2 border">Категория</th>
-                <th className="p-2 border">Подтема</th>
-                <th className="p-2 border">Сообщение</th>
-                <th className="p-2 border">Контакт</th>
-                <th className="p-2 border">AI: Интенция</th>
-                <th className="p-2 border">AI: Тональность</th>
-                <th className="p-2 border">🟡 Статус</th>
-                <th className="p-2 border">👤 Исполнитель</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (
-                <tr key={r._id} className="border-b hover:bg-gray-50">
-                  <td className="p-2 border">{r.name}</td>
-                  <td className="p-2 border">{r.region}</td>
-                  <td className="p-2 border">{r.category}</td>
-                  <td className="p-2 border">{r.subcategory}</td>
-                  <td className="p-2 border">{r.message}</td>
-                  <td className="p-2 border">{r.contact || "-"}</td>
-                  <td className="p-2 border">{r.aiResult?.intent || "-"}</td>
-                  <td className={`p-2 border ${colorForSentiment(r.aiResult?.sentiment)}`}>
-                    {r.aiResult?.sentiment || "-"}
-                  </td>
-                  <td className="p-2 border">
-                    <select
-                      value={r.status || "Новое"}
-                      onChange={(e) => updateField(r._id, "status", e.target.value)}
-                      className={`text-sm ${statusColors[r.status || "Новое"]}`}
-                    >
-                      <option>Новое</option>
-                      <option>В работе</option>
-                      <option>Завершено</option>
-                    </select>
-                  </td>
-                  <td className="p-2 border">
-                    <select
-                      value={r.executor || ""}
-                      onChange={(e) => updateField(r._id, "executor", e.target.value)}
-                      className="text-sm"
-                    >
-                      <option value="">—</option>
-                      {executors.map((e) => (
-                        <option key={e} value={e}>{e}</option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          dataSource={filteredRequests}
+          rowKey="_id"
+          bordered
+          pagination={{ pageSize: 10 }}
+          scroll={{ x: "max-content" }}
+        />
       )}
     </div>
   );

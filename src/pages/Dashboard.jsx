@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   PieChart, Pie, Cell, Legend, Tooltip,
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis,
+  LineChart, Line, CartesianGrid,
+  ResponsiveContainer,
 } from "recharts";
 import { FiBarChart2 } from "react-icons/fi";
 
@@ -20,32 +22,39 @@ export default function Dashboard() {
       });
   }, []);
 
-  const getRegionData = () => {
+  const countByField = (data, field) => {
     const counts = {};
-    requests.forEach((r) => {
-      const key = r.region || "Не указано";
+    data.forEach((r) => {
+      const key = r[field] || "Не указано";
       counts[key] = (counts[key] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   };
 
-  const getSubcategoryData = () => {
-    const counts = {};
-    requests.forEach((r) => {
-      const key = r.subcategory || "Не указано";
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  };
-
-  const getSentimentData = () => {
+  const getSentimentData = useMemo(() => {
     const counts = { позитив: 0, нейтрально: 0, негатив: 0 };
     requests.forEach((r) => {
       const s = r.aiResult?.sentiment || "нейтрально";
       counts[s] = (counts[s] || 0) + 1;
     });
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  };
+  }, [requests]);
+
+  const getDateData = useMemo(() => {
+    const counts = {};
+    requests.forEach((r) => {
+      const date = r.createdAt?.slice(0, 10) || "Не указано";
+      counts[date] = (counts[date] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [requests]);
+
+  // 💡 Мемоизация всех countByField'ов:
+  const regionData = useMemo(() => countByField(requests, "region"), [requests]);
+  const categoryData = useMemo(() => countByField(requests, "subcategory"), [requests]);
+  const statusData = useMemo(() => countByField(requests, "status"), [requests]);
 
   const total = requests.length;
 
@@ -66,73 +75,84 @@ export default function Dashboard() {
         <p className="text-center text-gray-400">Загрузка данных...</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {/* 📍 Регионы */}
-          <div className="bg-white shadow-lg rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4">📍 Распределение по регионам</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={getRegionData()}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  dataKey="value"
-                  label
-                >
-                  {getRegionData().map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          <ChartCard title="📍 Распределение по регионам">
+            <PieChartContent data={regionData} />
+          </ChartCard>
 
-          {/* 🗂 Темы */}
-          <div className="bg-white shadow-lg rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4">🗂 Темы обращений</h3>
+          <ChartCard title="🗂 Темы обращений">
+            <BarChartContent data={categoryData} />
+          </ChartCard>
+
+          <ChartCard title="🌈 Тональность (AI)">
+            <PieChartContent data={getSentimentData} useSentimentColors />
+          </ChartCard>
+
+          <ChartCard title="📌 Статусы обращений">
+            <BarChartContent data={statusData} />
+          </ChartCard>
+
+          <ChartCard title="📅 Обращения по датам">
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={getSubcategoryData()}>
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <LineChart data={getDateData}>
+                <CartesianGrid stroke="#ccc" />
+                <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="value" fill="#10b981" />
-              </BarChart>
+                <Line type="monotone" dataKey="count" stroke="#3b82f6" />
+              </LineChart>
             </ResponsiveContainer>
-          </div>
-
-          {/* 🌈 Тональность */}
-          <div className="bg-white shadow-lg rounded-xl p-6">
-            <h3 className="text-lg font-semibold mb-4">🌈 Тональность (AI)</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={getSentimentData()}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={90}
-                  dataKey="value"
-                  label
-                >
-                  {getSentimentData().map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={
-                        entry.name === "позитив" ? "#22c55e"
-                        : entry.name === "негатив" ? "#ef4444"
-                        : "#a3a3a3"
-                      }
-                    />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          </ChartCard>
         </div>
       )}
     </div>
+  );
+}
+
+function ChartCard({ title, children }) {
+  return (
+    <div className="bg-white shadow-lg rounded-xl p-6">
+      <h3 className="text-lg font-semibold mb-4">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function PieChartContent({ data, useSentimentColors = false }) {
+  return (
+    <ResponsiveContainer width="100%" height={250}>
+      <PieChart>
+        <Pie data={data} cx="50%" cy="50%" outerRadius={90} dataKey="value" label>
+          {data.map((entry, index) => (
+            <Cell
+              key={index}
+              fill={
+                useSentimentColors
+                  ? entry.name === "позитив"
+                    ? "#22c55e"
+                    : entry.name === "негатив"
+                    ? "#ef4444"
+                    : "#a3a3a3"
+                  : COLORS[index % COLORS.length]
+              }
+            />
+          ))}
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+function BarChartContent({ data }) {
+  return (
+    <ResponsiveContainer width="100%" height={250}>
+      <BarChart data={data}>
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="value" fill="#10b981" />
+      </BarChart>
+    </ResponsiveContainer>
   );
 }

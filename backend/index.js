@@ -6,22 +6,25 @@ require("dotenv").config();
 const app = express();
 const PORT = 4000;
 
-// Middleware
+// ✅ ВКЛЮЧАЕМ CORS ДО маршрутов!
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
-
-// Подключение к MongoDB
-mongoose.connect("mongodb://localhost:27017/citizen-feedback")
+// ✅ Подключение к MongoDB
+mongoose
+  .connect("mongodb://localhost:27017/citizen-feedback")
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// Роуты
+// ✅ Роуты
 const requestRoutes = require("./routes/request");
-app.use("/api/requests", requestRoutes);
+const aiRoute = require("./routes/ai");
 
-// Запуск сервера
+app.use("/api/requests", requestRoutes);
+app.use("/api/analyze", aiRoute); // AI маршрут
+
+// ✅ Запуск сервера
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
