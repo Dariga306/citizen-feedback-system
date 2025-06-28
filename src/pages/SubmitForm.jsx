@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function SubmitForm() {
   const [form, setForm] = useState({
@@ -16,7 +16,7 @@ export default function SubmitForm() {
     "Платежи / Kaspi": ["Налоги", "Госпошлина", "Платёж не прошёл"],
     "Мобильные приложения": ["eGov Mobile", "Kaspi", "eLicense"],
     "Госуслуги": ["Прописка", "Регистрация ИП", "Соцподдержка"],
-    "Другое": ["Другое"],
+    "Другое": ["Другое"]
   };
 
   const regions = [
@@ -26,7 +26,7 @@ export default function SubmitForm() {
     "Кызылординская область", "Мангистауская область", "Павлодарская область",
     "Северо-Казахстанская область", "Туркестанская область", "Улытауская область",
     "Астана", "Алматы", "Шымкент"
-  ];
+  ].sort((a, b) => a.localeCompare(b, "ru"));
 
   const getServiceOptions = (category) => {
     const map = {
@@ -34,17 +34,24 @@ export default function SubmitForm() {
       "ЭЦП / ЦОН": ["pki.gov.kz", "ЦОН", "EGov Mobile"],
       "Платежи / Kaspi": ["Kaspi.kz", "eGov Payment", "Kassa24"],
       "Мобильные приложения": ["Kaspi App", "EGov Mobile", "eLicense Mobile"],
-      "Госуслуги": ["eGov.kz", "eLicense.kz", "ENPF", "Qamqor.gov.kz"],
+      "Госуслуги": ["eGov.kz", "eLicense.kz", "ENPF", "Qamqor.gov.kz"]
     };
     return map[category] || [];
   };
+
+  useEffect(() => {
+    if (form.subcategory && form.category && getServiceOptions(form.category).length > 0) {
+      const service = getServiceOptions(form.category)[0];
+      setForm((prev) => ({ ...prev, service }));
+    }
+  }, [form.subcategory, form.category]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
       [name]: value,
-      ...(name === "category" ? { subcategory: "", service: "", customService: "" } : {}),
+      ...(name === "category" ? { subcategory: "", service: "", customService: "" } : {})
     }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
     setSuccess(false);
@@ -65,12 +72,12 @@ export default function SubmitForm() {
     if (!form.name.trim()) newErrors.name = "Укажите имя";
     if (!form.region) newErrors.region = "Выберите регион";
     if (!form.category) newErrors.category = "Выберите категорию";
-    if (!form.subcategory) newErrors.subcategory = "Выберите подтему";
+    if (form.category !== "Другое" && !form.subcategory) newErrors.subcategory = "Выберите подтему";
     const service = form.service === "other" ? form.customService.trim() : form.service;
     if (!service) newErrors.service = "Укажите сервис";
     if (!form.message.trim()) newErrors.message = "Введите сообщение";
-    if (form.message.length > maxMessageLength)
-      newErrors.message = `Максимум ${maxMessageLength} символов`;
+    if (form.message.length > maxMessageLength) newErrors.message = `Максимум ${maxMessageLength} символов`;
+    if (form.contact && !/^\+7\d{10}$/.test(form.contact)) newErrors.contact = "Введите номер в формате +7XXXXXXXXXX";
     return newErrors;
   };
 
@@ -190,9 +197,17 @@ export default function SubmitForm() {
           rows="4" maxLength={maxMessageLength} />
         {errors.message && <p className="text-red-500 text-sm">{errors.message}</p>}
 
-        <input name="contact" value={form.contact} onChange={handleChange}
-          placeholder="Контакт (необязательно)"
-          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white" />
+        <input
+          name="contact"
+          value={form.contact}
+          onChange={handleChange}
+          placeholder="Контакт (например, +77011234567)"
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+          inputMode="tel"
+          pattern="^\\+7\\d{10}$"
+        />
+        {errors.contact && <p className="text-red-500 text-sm">{errors.contact}</p>}
+
 
         <input type="file" accept="image/*" onChange={handleFileChange}
           className="w-full border p-2 rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white" />
