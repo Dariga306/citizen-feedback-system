@@ -2,15 +2,8 @@ import React, { useState } from "react";
 
 export default function SubmitForm() {
   const [form, setForm] = useState({
-    name: "",
-    region: "",
-    category: "",
-    subcategory: "",
-    service: "",
-    customService: "",
-    contact: "",
-    message: "",
-    attachment: null,
+    name: "", region: "", category: "", subcategory: "",
+    service: "", customService: "", contact: "", message: "", attachment: null,
   });
 
   const [errors, setErrors] = useState({});
@@ -60,7 +53,6 @@ export default function SubmitForm() {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = () => {
       setForm((prev) => ({ ...prev, attachment: reader.result }));
@@ -90,7 +82,6 @@ export default function SubmitForm() {
       return;
     }
 
-    // 🔍 AI-анализ на backend
     const aiRes = await fetch("http://localhost:4000/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -98,8 +89,9 @@ export default function SubmitForm() {
     });
     const aiResult = await aiRes.json();
 
-    const finalService =
-      form.service === "other" ? form.customService?.trim() || "Не указано" : form.service;
+    const finalService = form.service === "other"
+      ? form.customService?.trim() || "Не указано"
+      : form.service;
 
     const newEntry = {
       ...form,
@@ -120,15 +112,8 @@ export default function SubmitForm() {
 
       setSuccess(true);
       setForm({
-        name: "",
-        region: "",
-        category: "",
-        subcategory: "",
-        service: "",
-        customService: "",
-        contact: "",
-        message: "",
-        attachment: null,
+        name: "", region: "", category: "", subcategory: "",
+        service: "", customService: "", contact: "", message: "", attachment: null,
       });
     } catch (err) {
       console.error("Ошибка отправки:", err);
@@ -137,88 +122,86 @@ export default function SubmitForm() {
   };
 
   return (
-    <div className="max-w-xl mx-auto mt-10 p-6 bg-white rounded shadow">
+    <div className="max-w-xl mx-auto mt-10 p-6 bg-white dark:bg-gray-900 rounded shadow text-gray-900 dark:text-gray-100 transition-all">
       <h2 className="text-2xl font-bold text-center mb-4">📬 Обращение гражданина</h2>
       {success && (
-        <div className="bg-green-100 text-green-800 p-2 rounded mb-4 text-sm">
+        <div className="bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-100 p-2 rounded mb-4 text-sm">
           Обращение успешно отправлено!
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <input name="name" value={form.name} onChange={handleChange}
-          placeholder="Ваше имя *" className="w-full p-2 border rounded" />
-        {errors.name && <p className="text-red-600 text-sm">{errors.name}</p>}
+          placeholder="Ваше имя *"
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white" />
+        {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
 
         <select name="region" value={form.region} onChange={handleChange}
-          className="w-full p-2 border rounded">
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white">
           <option value="">Выберите регион *</option>
           {regions.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        {errors.region && <p className="text-red-600 text-sm">{errors.region}</p>}
+        {errors.region && <p className="text-red-500 text-sm">{errors.region}</p>}
 
         <select name="category" value={form.category} onChange={handleChange}
-          className="w-full p-2 border rounded">
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white">
           <option value="">Выберите категорию *</option>
           {Object.keys(categories).map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        {errors.category && <p className="text-red-600 text-sm">{errors.category}</p>}
+        {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
 
         <select name="subcategory" value={form.subcategory} onChange={handleChange}
-          className="w-full p-2 border rounded" disabled={!form.category}>
+          disabled={!form.category}
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white">
           <option value="">Выберите подтему *</option>
           {form.category && categories[form.category]?.map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-        {errors.subcategory && <p className="text-red-600 text-sm">{errors.subcategory}</p>}
+        {errors.subcategory && <p className="text-red-500 text-sm">{errors.subcategory}</p>}
 
         {form.category && (
           <>
-            <select
-              name="service"
-              value={form.service}
-              onChange={handleChange}
-              className="w-full p-2 border rounded"
-            >
+            <select name="service" value={form.service} onChange={handleChange}
+              className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white">
               <option value="">Выберите цифровой сервис *</option>
               {getServiceOptions(form.category).map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
               <option value="other">Другое...</option>
             </select>
-            {errors.service && <p className="text-red-600 text-sm">{errors.service}</p>}
+            {errors.service && <p className="text-red-500 text-sm">{errors.service}</p>}
 
             {form.service === "other" && (
-              <input
-                name="customService"
-                value={form.customService || ""}
+              <input name="customService" value={form.customService || ""}
                 onChange={(e) => setForm((prev) => ({ ...prev, customService: e.target.value }))}
                 placeholder="Введите название сервиса"
-                className="w-full p-2 border rounded mt-2"
+                className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
               />
             )}
           </>
         )}
 
         <textarea name="message" value={form.message} onChange={handleChange}
-          placeholder="Текст обращения *" className="w-full p-2 border rounded"
+          placeholder="Текст обращения *"
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white"
           rows="4" maxLength={maxMessageLength} />
-        {errors.message && <p className="text-red-600 text-sm">{errors.message}</p>}
+        {errors.message && <p className="text-red-500 text-sm">{errors.message}</p>}
 
         <input name="contact" value={form.contact} onChange={handleChange}
-          placeholder="Контакт (необязательно)" className="w-full p-2 border rounded" />
+          placeholder="Контакт (необязательно)"
+          className="w-full p-2 border rounded bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-white" />
 
         <input type="file" accept="image/*" onChange={handleFileChange}
-          className="w-full border p-2 rounded" />
+          className="w-full border p-2 rounded dark:bg-gray-800 dark:border-gray-700 dark:text-white" />
         {form.attachment && (
-          <p className="text-sm text-green-600">📎 Файл прикреплён</p>
+          <p className="text-sm text-green-600 dark:text-green-400">📎 Файл прикреплён</p>
         )}
 
         <button type="submit"
-          className="bg-blue-600 text-white w-full py-2 rounded hover:bg-blue-700">
+          className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white w-full py-2 rounded transition">
           Отправить
         </button>
       </form>

@@ -5,7 +5,15 @@ import {
   LineChart, Line, CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import { FiBarChart2 } from "react-icons/fi";
+import {
+  PieChartOutlined,
+  BarChartOutlined,
+  AreaChartOutlined,
+  ExperimentOutlined,
+  CheckCircleOutlined
+} from "@ant-design/icons";
+
+import InfoCard from "../components/InfoCard"; // 📦 твой UI-компонент карточки
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#d946ef", "#f97316", "#10b981"];
 
@@ -51,7 +59,6 @@ export default function Dashboard() {
       .sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [requests]);
 
-  // 💡 Мемоизация всех countByField'ов:
   const regionData = useMemo(() => countByField(requests, "region"), [requests]);
   const categoryData = useMemo(() => countByField(requests, "subcategory"), [requests]);
   const statusData = useMemo(() => countByField(requests, "status"), [requests]);
@@ -61,7 +68,7 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto mt-10 px-4">
       <div className="flex items-center justify-center gap-2 mb-4">
-        <FiBarChart2 className="text-3xl text-blue-600" />
+        <BarChartOutlined className="text-3xl text-blue-600" />
         <h2 className="text-3xl font-bold text-center">Аналитика обращений</h2>
       </div>
 
@@ -75,23 +82,23 @@ export default function Dashboard() {
         <p className="text-center text-gray-400">Загрузка данных...</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          <ChartCard title="📍 Распределение по регионам">
+          <InfoCard title="📍 Распределение по регионам" icon={<PieChartOutlined />}>
             <PieChartContent data={regionData} />
-          </ChartCard>
+          </InfoCard>
 
-          <ChartCard title="🗂 Темы обращений">
+          <InfoCard title="🗂 Темы обращений" icon={<BarChartOutlined />}>
             <BarChartContent data={categoryData} />
-          </ChartCard>
+          </InfoCard>
 
-          <ChartCard title="🌈 Тональность (AI)">
+          <InfoCard title="🌈 Тональность (AI)" icon={<ExperimentOutlined />}>
             <PieChartContent data={getSentimentData} useSentimentColors />
-          </ChartCard>
+          </InfoCard>
 
-          <ChartCard title="📌 Статусы обращений">
+          <InfoCard title="📌 Статусы обращений" icon={<CheckCircleOutlined />}>
             <BarChartContent data={statusData} />
-          </ChartCard>
+          </InfoCard>
 
-          <ChartCard title="📅 Обращения по датам">
+          <InfoCard title="📅 Обращения по датам" icon={<AreaChartOutlined />}>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={getDateData}>
                 <CartesianGrid stroke="#ccc" />
@@ -101,22 +108,14 @@ export default function Dashboard() {
                 <Line type="monotone" dataKey="count" stroke="#3b82f6" />
               </LineChart>
             </ResponsiveContainer>
-          </ChartCard>
+          </InfoCard>
         </div>
       )}
     </div>
   );
 }
 
-function ChartCard({ title, children }) {
-  return (
-    <div className="bg-white shadow-lg rounded-xl p-6">
-      <h3 className="text-lg font-semibold mb-4">{title}</h3>
-      {children}
-    </div>
-  );
-}
-
+// 🎨 PieChartContent и BarChartContent остались такими же
 function PieChartContent({ data, useSentimentColors = false }) {
   return (
     <ResponsiveContainer width="100%" height={250}>
