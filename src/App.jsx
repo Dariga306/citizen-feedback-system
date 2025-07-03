@@ -4,7 +4,6 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PrivateRoute from "./components/PrivateRoute";
 
-// 🔁 Lazy imports
 const SubmitForm = lazy(() => import("./pages/SubmitForm"));
 const RequestsTable = lazy(() => import("./pages/RequestsTable"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -13,7 +12,7 @@ const Login = lazy(() => import("./pages/Login"));
 export default function App() {
   return (
     <BrowserRouter>
-      {/* ✅ Обёртка с темной темой и плавным переходом */}
+      {}
       <div className="min-h-screen flex flex-col bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300">
         <Navbar />
         <div className="flex-grow">

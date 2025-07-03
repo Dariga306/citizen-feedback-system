@@ -1,9 +1,8 @@
-// backend/routes/request.js
+
 const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 
-// Схема обращения
 const requestSchema = new mongoose.Schema({
   name: String,
   region: String,
@@ -19,10 +18,8 @@ const requestSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-// Модель
 const Request = mongoose.model("Request", requestSchema);
 
-// 📥 POST — Добавить обращение
 router.post("/", async (req, res) => {
   try {
     const newRequest = new Request(req.body);
@@ -34,7 +31,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// 📤 GET — Получить все обращения
 router.get("/", async (req, res) => {
   try {
     const data = await Request.find().sort({ createdAt: -1 });
@@ -45,7 +41,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 🛠 PATCH — Обновить поле (например, статус или исполнитель)
 router.patch("/:id", async (req, res) => {
   try {
     await Request.findByIdAndUpdate(req.params.id, req.body);

@@ -13,7 +13,7 @@ import {
   CheckCircleOutlined
 } from "@ant-design/icons";
 
-import InfoCard from "../components/InfoCard"; // 📦 твой UI-компонент карточки
+import InfoCard from "../components/InfoCard"; 
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#d946ef", "#f97316", "#10b981"];
 
@@ -115,7 +115,6 @@ export default function Dashboard() {
   );
 }
 
-// 🎨 PieChartContent и BarChartContent остались такими же
 function PieChartContent({ data, useSentimentColors = false }) {
   return (
     <ResponsiveContainer width="100%" height={250}>

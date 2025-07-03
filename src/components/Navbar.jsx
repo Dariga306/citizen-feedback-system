@@ -37,7 +37,7 @@ export default function Navbar() {
   return (
     <nav className="bg-white dark:bg-gray-900 shadow p-4 mb-6 text-sm">
       <div className="flex justify-between items-center max-w-7xl mx-auto">
-        {/* Левый блок: меню и ссылки */}
+        {}
         <div className="flex items-center gap-4">
           <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-xl text-blue-600 dark:text-blue-300">
             <FiMenu />
@@ -59,9 +59,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Правый блок: вход/выход + тема */}
+        {}
         <div className="flex items-center gap-4">
-          {/* Переключатель темы */}
+          {}
           <button
             onClick={toggleTheme}
             className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -89,7 +89,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Мобильное меню */}
+      {}
       {menuOpen && (
         <div className="md:hidden mt-4 flex flex-col gap-2">
           <Link to="/submit" className={linkClass("/submit")}>
